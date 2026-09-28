@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yoyo-service
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: yoyo-service
+
+  template:
+    metadata:
+      labels:
+        app: yoyo-service
+
+    spec:
+      containers:
+        - name: yoyo-service
+          image: yoyo-service:1.0
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: APP_VERSION
+              value: "v1"
+
+            - name: READY_DELAY_SECONDS
+              value: "0"
+
+            - name: NEVER_READY
+              value: "false"
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 1
+            failureThreshold: 2
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yoyo-service
+spec:
+  type: ClusterIP
+
+  selector:
+    app: yoyo-service
+
+  ports:
+    - port: 80
+      targetPort: 8080
